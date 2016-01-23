@@ -1,0 +1,45 @@
+So, a considerable amount of time has passed, but I'm back, hopefully trying to be more consistent in the frequency and quantity of post, but I can't ensure anything :)
+
+Today I bring you, a very simple timer written in C++11 using the <code>chrono</code> library. It's implemented in a single header, using a bit of templates. With nothing else to add, let's dissect it:
+
+[code language="cpp"]
+#ifndef _TIMER_H_
+#define _TIMER_H_
+#include <chrono>
+
+namespace util {
+    template<typename time_ratio_t>
+    class Timer {
+[/code]
+
+Nothing much to say from this part, just <code>ifndef</code> guards and namespace &amp; class definition. Note the <code>typename time_ratio_t</code>, this type will define how the timer will keep track of time (more on this later).
+
+[code language="cpp"]
+    private:
+        using clock = std::chrono::high_resolution_clock;
+        using point = std::chrono::time_point<clock>;
+        const point m_start = clock::now();
+        point m_snap = m_start;
+
+        template<typename count_t>
+        static count_t get_diff(const point& start, const point& end) {
+            using duration_t = std::chrono::duration<count_t, time_ratio_t>;
+            return std::chrono::duration_cast<duration_t>(end - start).count();
+        }
+[/code]
+
+This is more interesting, first a couple of private <code>using</code> declarations, to shorten the names of a couple of types, the <code>high_resolution_clock</code> is the clock we'll use, there are other available, with different properties, you can read more of them here <a href="http://en.cppreference.com/w/cpp/chrono/high_resolution_clock">High Resolution Clock</a>.
+
+We will implement the functionalities of the Timer using 2 member variables, both of them "time point" so, the C++ version of saying "instances in time". The start, being also created when the timer is created, and another one to keep track of snapshots.
+
+Finally, there's the <code>get_diff</code> function, that returns the difference between a starting point and an end point.
+<ul>
+	<li>This function is made <code>static</code> only because it doesn't interacts with the members of the timer.</li>
+        <li>The template parameter defines how the return value will be represented (i.e. <code>float</code>, <code>uint64_t</code>, etc.).</li>
+        <li>The <code>using</code> declaration is there only to shorten the next statement.</li>
+        <li>The <code>return</code> statement simply calculates the difference between the end and the start counting the amount of time that passed.</li>
+</ul>
+
+ A duration type, is <code>chrono</code> way of representing well, a duration, a difference between two points in time. It's composed of 2 underlying types one for the representation and one for its ratio with respect to 1 second. This is where the template parameters of the <code>Timer</code> comes into place. This Timer can be created to track seconds, milliseconds or any ratio, passing any of the standard ratios defined by the stl (like std::milli) which is really handy. And then the function can return that quantity of time on the <code>count_t</code> representation. (Be wary of overflows with very big values for the amount of time not fitting in the representation, the <code>Timer</code> doesn't do this')
+ 
+ 
