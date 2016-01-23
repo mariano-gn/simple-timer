@@ -23,7 +23,6 @@ SOFTWARE.
 #ifndef _TIMER_H_
 #define _TIMER_H_
 #include <chrono>
-#include <cstdint>
 
 namespace util {
     template<typename time_ratio_t>
