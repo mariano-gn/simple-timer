@@ -45,7 +45,7 @@ namespace util {
     private:
         using clock = std::chrono::high_resolution_clock;
         using point = std::chrono::time_point<clock>;
-        point m_start = clock::now();
+        const point m_start = clock::now();
         point m_snap = m_start;
         
         template<typename count_t>
