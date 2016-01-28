@@ -1,4 +1,7 @@
-So, a considerable amount of time has passed, but I'm back, hopefully trying to be more consistent in the frequency and quantity of post, but I can't ensure anything :)
+<a href="#es">Español</a>
+<a id="top"></a>
+<br>
+A considerable amount of time has passed, but I'm back, hopefully trying to be more consistent in the frequency and quantity of post, but I can't ensure anything :)
 
 Today I bring you, a very simple timer written in C++11 using the <code>chrono</code> library. It's implemented in a single header, using a bit of templates. With nothing else to add, let's dissect it:
 
@@ -12,7 +15,7 @@ namespace util {
     class Timer {
 [/code]
 
-Nothing much to say from this part, just <code>ifndef</code> guards and namespace &amp; class definition. Note the <code>typename time_ratio_t</code>, this type will define how the timer will keep track of time (more on this later).
+Nothing much to say from this part, just <code>ifndef</code> guards and <code>namespace</code> &amp; <code>class</code> definition. Note the <code>typename time_ratio_t</code>, this type will define how the timer will keep track of time (more on this later).
 
 [code language="cpp"]
     private:
@@ -28,18 +31,150 @@ Nothing much to say from this part, just <code>ifndef</code> guards and namespac
         }
 [/code]
 
-This is more interesting, first a couple of private <code>using</code> declarations, to shorten the names of a couple of types, the <code>high_resolution_clock</code> is the clock we'll use, there are other available, with different properties, you can read more of them here <a href="http://en.cppreference.com/w/cpp/chrono/high_resolution_clock">High Resolution Clock</a>.
+This is more interesting, first a couple of private <code>using</code> declarations, to shorten the names of a couple of types, the <code>high_resolution_clock</code> is the clock we'll use, there are other available, with different properties, you can read more of them here: <a href="http://en.cppreference.com/w/cpp/chrono/high_resolution_clock">High Resolution Clock</a>.
 
-We will implement the functionalities of the Timer using 2 member variables, both of them "time point" so, the C++ version of saying "instances in time". The start, being also created when the timer is created, and another one to keep track of snapshots.
+We will implement the functionalities of the timer using 2 member variables, both of them "time point", the C++ / <code>std::chrono</code> version of saying "instances in time": the start, being also created when the timer is created, and another one to keep track of snapshots.
 
-Finally, there's the <code>get_diff</code> function, that returns the difference between a starting point and an end point.
+Finally, there's the <code>get_diff()</code> function, that returns the difference between a starting point and an end point.
 <ul>
 	<li>This function is made <code>static</code> only because it doesn't interacts with the members of the timer.</li>
-        <li>The template parameter defines how the return value will be represented (i.e. <code>float</code>, <code>uint64_t</code>, etc.).</li>
-        <li>The <code>using</code> declaration is there only to shorten the next statement.</li>
-        <li>The <code>return</code> statement simply calculates the difference between the end and the start counting the amount of time that passed.</li>
+    <li>The template parameter defines how the return value will be represented (i.e. <code>float</code>, <code>uint64_t</code>, etc.).</li>
+    <li>The <code>using</code> declaration is there only to shorten the next statement.</li>
+    <li>The return value it's the result of using the <code>count()</code> function that calculates the amount of units of time between the 2 instances of time, each tick expressed with the size defined with the template class parameter (seconds, milliseconds, etc.).</li>
 </ul>
 
- A duration type, is <code>chrono</code> way of representing well, a duration, a difference between two points in time. It's composed of 2 underlying types one for the representation and one for its ratio with respect to 1 second. This is where the template parameters of the <code>Timer</code> comes into place. This Timer can be created to track seconds, milliseconds or any ratio, passing any of the standard ratios defined by the stl (like std::milli) which is really handy. And then the function can return that quantity of time on the <code>count_t</code> representation. (Be wary of overflows with very big values for the amount of time not fitting in the representation, the <code>Timer</code> doesn't do this')
+A <code>std::duration</code> type, is <code>std::chrono</code> way of representing well, a duration, a difference between two points in time. It's composed of 2 underlying types, one for the representation and one for its ratio with respect to 1 second. This is where the template parameters of the <code>Timer</code> comes into place. This timer can be created to track seconds, milliseconds or any ratio, passing any of the standard ratios defined by the stl (like std::milli) which is really handy. 
+
+And then the function can return that quantity of time on the <code>count_t</code> representation. (Be wary of overflows with very big values for the amount of time not fitting in the representation, the <code>Timer</code> doesn't do this)
+
+Moving on:
+
+[code language="cpp"]
+    public:
+        void snap() {
+            m_snap = clock::now();
+        }
+
+        template<typename count_t>
+        count_t get_delta() const {
+            return get_diff<count_t>(m_snap, clock::now());
+        }
+
+        template<typename count_t>
+        count_t get_total() const {
+            return get_diff<count_t>(m_start, clock::now());
+        }
+[/code]
  
+This part is easier, building on top of the private members and the static function provides 3 public member functions, 
+<ul>
+    <li><code>snap()</code> which takes a time snapshot used to calculate time deltas, using the m_snap member.</li>
+	<li><code>get_delta()</code> which returns the delta (as a <code>count_t</code> representation of the duration) between the last time <code>snap()</code> was called and the current time.</li>
+	<li><code>get_total()</code> that returns total time of existence of the timer (that's why it uses <code>m_start</code>).</li>
+</ul>
+
+And that's it, at least for this implementation... 
+
+Things to try :)
+
+<ul>
+	<li>Templatize the clock, so that the timer works on any of the <code>std::chrono</code> clocks availables.</li>
+    <li>Generalize the <code>m_start</code> and <code>m_end</code> members to a list, so that it's possible to have arbitrary different measurements of time, or even, the same measurements represented using different data types.</li>
+    <li>Add <a href="https://en.wikipedia.org/wiki/Substitution_failure_is_not_an_error">SFINAE</a>-based controls to prevent the compilation of code that creates potential data loss when <code>get_*</code> functions are called with a "not big enough" representation to hold the duration count. Think of the return type of <code>std::chrono::duration::count()</code> and how it relates to the <code>count_t</code> template parameter and, for example, <a href="http://en.cppreference.com/w/cpp/types/enable_if"><code>std::enable_if</code></a>.</li>
+    <li>Other things :P I'm out of ideas for this one</li> 
+</ul>
+
+Hope you like it, <a href="https://github.com/mariano-gn/simple-timer">here</a> you can find the source code for the timer and an test implementation to show how it can be used. 
+<br>
+<a href="#top">Back to Top</a>
+<hr>
+<a id="es"></a>
+<br>
+Una considerable cantidad de tiempo pasó, pero estoy de vuelta. Tratando de ser más consistente conla frecuencia y la cantidad de publicaciones, pero sin prometer nada :)
+
+Hoy tengo un timer muy simple escrito en C++11 y usando la librería <code>chrono</code>. Está implementado como un solo header, usando un poco de templates. Sin nada más que agregar, acá está:
+
+[code language="cpp"]
+#ifndef _TIMER_H_
+#define _TIMER_H_
+#include <chrono>
+
+namespace util {
+    template<typename time_ratio_t>
+    class Timer {
+[/code]
+
+En esta parte no hay mucho que decir, solo guardas <code>ifndef</code> y la definición de <code>namespace</code> &amp; <code>class</code>. Hay que notar el <code>typename time_ratio_t</code>, este tipo va a definir cómo es que el timer va a seguir el paso del tiempo (más sobre esto luego).
+
+[code language="cpp"]
+    private:
+        using clock = std::chrono::high_resolution_clock;
+        using point = std::chrono::time_point<clock>;
+        const point m_start = clock::now();
+        point m_snap = m_start;
+
+        template<typename count_t>
+        static count_t get_diff(const point& start, const point& end) {
+            using duration_t = std::chrono::duration<count_t, time_ratio_t>;
+            return std::chrono::duration_cast<duration_t>(end - start).count();
+        }
+[/code]
+
+Esta parte es más interesante, primero un par de declaraciones <code>using</code> privadas, para acortar el nombre de algunos tipos, el  <code>high_resolution_clock</code> es el reloj interno que va a usar el timer, se pueden utilizar otros que tienen diferentes propiedades, podés leer más sobre ello acá: <a href="http://es.cppreference.com/w/cpp/chrono/high_resolution_clock">High Resolution Clock</a>.
+
+Las funcionalidades van a quedar implementadas usando 2 variables miembro, ambas "time point", que es la forma de decir "ïnstancia en el tiempo" que tiene C++ / <code>std::chrono</code>: la variable de comienzo, creada e instanciada al mismo tiempo que el timer  y otra para mantener guardada la última instancia obtenida con un snapshot.
+
+Finalmente la función <code>get_diff()</code>, que retorna la diferencia entre dos puntos en el tiempo.
+
+<ul>
+	<li>Esta función esta marcada como <code>static</code> porque no tiene interacción con ningún miembro del objeto timer.</li>
+    <li>El parámetro del template define la representación del valor de retorno (p.e. <code>float</code>, <code>uint64_t</code>, etc.).</li>
+    <li>La declaración de <code>using</code> está solamente para acortar un poco la siguiente línea.</li>
+    <li>El valor de retorno es el resultado de utilizar la función <code>count()</code> que calcula la cantidad de unidades de tiempo que pasaron entre los dos instantes, cada tick expresado en el tamaño definido con el parametro template de la clase (segundos, milisegundos, etc.).</li>
+</ul>
+
+Un tipo <code>std::duration</code>, es la manera de <code>std::chrono</code> de representar bueno, una duración, la diferencia entre dos puntos en el tiempo. Está compuesto por 2 tipos, una para la represetación del acumulador del tiempo y otro para indicar cómo se debe interpretar cada unidad del acumulador, el ratio que tiene con respecto a 1 segundo. Ahí es donde juega el parámetro template de la clase. Este timer puede ser creado para contar segundos, milisegundos, o cualquier otro ratio, pasando los tipos estándar definidos en la stl (como std::milli) lo cual lo hace útil.  
+
+A raíz de eso, la función puede retornar la cantidad de tiempo que pasó utilizando el tipo <code>count_t</code>. (Guarda con perder información, ya que no hay ningun control que satisfaga que count_t es lo suficientemente grande para retornar la diferencia de tiempo utilizando el ratio y representación del <code>Timer</code>)
  
+Siguiendo:
+
+[code language="cpp"]
+    public:
+        void snap() {
+            m_snap = clock::now();
+        }
+
+        template<typename count_t>
+        count_t get_delta() const {
+            return get_diff<count_t>(m_snap, clock::now());
+        }
+
+        template<typename count_t>
+        count_t get_total() const {
+            return get_diff<count_t>(m_start, clock::now());
+        }
+[/code]
+ 
+Esta parte es más fácil, construyendo sobre los miembros privados y la función estática, la clase provee 3 métodos públicos: 
+<ul>
+	<li><code>snap()</code> que almacena una nueva instancia de tiempo, para calcular el delta, utilizando el miembro <code>m_snap</code> member.</li>
+	<li><code>get_delta()</code> que retorna el delta (como una representación de duración expresada con el tipo <code>count_t</code>) entre la última vez que se llamó a <code>snap()</code> y el tiempo actual.</li>
+	<li><code>get_total()</code> que retorna el tiempo total de existencia del timer (por ello utiliza <code>m_start</code>).</li>
+</ul>
+
+Y ya está, por lo menos para esta implementación...
+
+Algunas cosas para probar :)
+
+<ul>
+	<li>Convertir el tipo de relojs en un parámetro de template, para que el timer sirva con cualquiera de los relojes disponibles en <code>std::chrono</code>.</li>
+    <li>Generalizar los miembros <code>m_start</code> y <code>m_end</code> a una lista, así es posbile tener medidas de tiempo arbitrarias, e incluso poder retornar las mismas medidas utilizando diferentes timpos de datos.</li>
+    <li>Agregar controles basados en <a href="https://en.wikipedia.org/wiki/Substitution_failure_is_not_an_error">SFINAE</a>* para prevenir la compilación de código que pueda crear potenciales pérdidas de datos al llamar a las funciones <code>get_*</code> utilizando un tipo "no lo suficientemente grande" para representar el valor de cantidad de la duración. Pesá en el valor de retorno de la función <code>std::chrono::duration::count()</code> y cómo se relaciona con el parámetro de template <code>count_t</code> y, por ejemplo <a href="http://es.cppreference.com/w/cpp/types/enable_if"><code>std::enable_if</code></a>.</li>
+    <li>Alguna otra cosa :P No tengo más ideas</li> 
+ </ul>
+
+Espero haya gustado, <a href="https://github.com/mariano-gn/simple-timer">acá</a> se puede encontrar el código fuente del timer y una implementación de test para mostrar cómo se puede usar.
+
+*Perdón por el link en Inglés, en lo breve que busqué no encontré una buena fuente que explicara SFINAE en español. Capaz hasta puedo escribir algo luego :)
+<a href="#es">Inicio</a>
