@@ -25,19 +25,23 @@ SOFTWARE.
 #include <chrono>
 
 namespace util {
-    template<typename time_ratio_t>
+    template<typename time_ratio_t = std::milli>
     class Timer {
     public:
         void snap() {
             m_snap = clock::now();
         }
 
-        template<typename count_t>
+        void reset() {
+            m_start = m_snap = clock::now();
+        }
+
+        template<typename count_t = float>
         count_t get_delta() const {
             return get_diff<count_t>(m_snap, clock::now());
         }
 
-        template<typename count_t>
+        template<typename count_t = double>
         count_t get_total() const {
             return get_diff<count_t>(m_start, clock::now());
         }
@@ -45,7 +49,7 @@ namespace util {
     private:
         using clock = std::chrono::high_resolution_clock;
         using point = std::chrono::time_point<clock>;
-        const point m_start = clock::now();
+        point m_start = clock::now();
         point m_snap = m_start;
         
         template<typename count_t>
